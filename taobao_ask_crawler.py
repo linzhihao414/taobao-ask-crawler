@@ -12,11 +12,11 @@ from pathlib import Path
 from playwright.async_api import async_playwright, Page, BrowserContext
 
 # ============ 配置区 ============
-KEYWORDS_FILE = Path(__file__).parent / "关键词.txt"  # 从文件读关键词
-MAX_PRODUCTS = 30                   # 每个关键词最多采多少个商品
-MAX_QUESTIONS_PER_PRODUCT = 30      # 每个商品最多采多少个问题
+KEYWORDS_FILE = Path(__file__).parent / "关键词.txt"
+MAX_PRODUCTS = 50                   # 每个关键词最多采多少个商品
+MAX_QUESTIONS_PER_PRODUCT = 30
 OUTPUT_DIR = Path(__file__).parent / "导出结果"
-HEADLESS = False                    # 有头模式（需要扫码登录）
+HEADLESS = False
 # ============================================
 
 
@@ -80,8 +80,8 @@ async def search_products(page: Page, keyword: str):
 
     # 翻页采集
     for page_num in range(1, 4):
-        print(f"  第{page_num}页...")
-        await asyncio.sleep(2)
+        print(f"  Page {page_num}...")
+        await asyncio.sleep(1)
 
         items = await page.evaluate("""
             () => {
@@ -162,9 +162,9 @@ async def scrape_ask_questions(context: BrowserContext, product):
                 break
 
         # 滚动加载更多
-        for _ in range(10):
-            await page.mouse.wheel(0, 1000)
-            await asyncio.sleep(0.8)
+        for _ in range(5):
+            await page.mouse.wheel(0, 1500)
+            await asyncio.sleep(0.5)
 
         # 获取页面所有文本
         all_text = await page.evaluate("() => document.body.innerText")
@@ -294,9 +294,12 @@ async def main():
             all_data = []
             for i, product in enumerate(products[:MAX_PRODUCTS], 1):
                 print(f"\n[{i}/{min(len(products), MAX_PRODUCTS)}] {product.get('title','')[:30]}")
-                questions = await scrape_ask_questions(context, product)
-                all_data.extend(questions)
-                await asyncio.sleep(1.5)
+                try:
+                    questions = await scrape_ask_questions(context, product)
+                    all_data.extend(questions)
+                except Exception as e:
+                    print(f"  SKIP: {e}")
+                await asyncio.sleep(0.5)
 
             save_to_excel(all_data, keyword)
             total += len(all_data)
