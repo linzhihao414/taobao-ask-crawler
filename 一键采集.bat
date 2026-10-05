@@ -1,13 +1,22 @@
 @echo off
-chcp 65001 >nul
 cd /d "%~dp0"
 echo ============================================
-echo   淘宝问大家采集工具
+echo   Taobao Ask-Everyone Crawler
 echo ============================================
 echo.
-echo 关键词在"关键词.txt"里改
-echo 结果会保存到"导出结果"文件夹
-echo.
-pause
-E:\中沃皮革\小红书笔记\.venv\Scripts\python.exe taobao_ask_crawler.py
+if not exist ".venv" (
+    echo [1/3] Creating venv...
+    python -m venv .venv
+    call .venv\Scripts\activate.bat
+    echo [2/3] Installing playwright...
+    pip install playwright openpyxl -i https://pypi.tuna.tsinghua.edu.cn/simple
+    echo [3/3] Installing chromium...
+    playwright install chromium
+    echo.
+    echo Setup complete! Run again to start.
+    pause
+    exit /b
+)
+call .venv\Scripts\activate.bat
+python taobao_ask_crawler.py
 pause
