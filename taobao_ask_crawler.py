@@ -146,6 +146,21 @@ async def scrape_ask_questions(context: BrowserContext, product):
         await page.goto(ask_url, wait_until="domcontentloaded", timeout=20000)
         await asyncio.sleep(3)
 
+        # 检测滑块验证，等待用户手动过
+        for i in range(60):
+            url = page.url
+            content = await page.content()
+            if 'slider' in content.lower() or 'verify' in url.lower() or 'nocaptcha' in url.lower():
+                print("  ⚠️ 出现滑块验证，请在浏览器中手动完成...")
+                for j in range(60):
+                    await asyncio.sleep(2)
+                    if 'verify' not in page.url.lower() and 'nocaptcha' not in page.url.lower():
+                        print("  ✅ 验证完成，继续...")
+                        await asyncio.sleep(2)
+                        break
+            else:
+                break
+
         # 滚动加载更多
         for _ in range(10):
             await page.mouse.wheel(0, 1000)
@@ -248,11 +263,20 @@ async def main():
     print()
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=HEADLESS)
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            viewport={"width": 1280, "height": 800}
+        browser = await p.chromium.launch(
+            headless=HEADLESS,
+            channel="chrome",  # 使用本机安装的真实Chrome
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--start-maximized',
+            ]
         )
+        context = await browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            locale="zh-CN",
+            timezone_id="Asia/Shanghai",
+        )
+        await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = await context.new_page()
 
         total = 0
